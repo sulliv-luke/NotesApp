@@ -58,7 +58,7 @@ const NoteDetail = (props) => {
     )
   }
 
-  const handleOnClose = async (title, desc, time) => {
+  const handleUpdate = async (title, desc, time) => {
     const result = await AsyncStorage.getItem('notes')
     let notes = []
     if (result !== null) notes = JSON.parse(result)
@@ -79,7 +79,7 @@ const NoteDetail = (props) => {
     await AsyncStorage.setItem('notes', JSON.stringify(newNotes))
   }
 
-  const handleUpdate = () => setShowModal(false)
+  const handleOnClose = () => setShowModal(false)
 
   const openEditModal = () => {
     setIsEdit(true)
