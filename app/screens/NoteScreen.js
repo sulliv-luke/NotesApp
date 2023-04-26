@@ -13,14 +13,19 @@ import {
 import Note from '../components/Note'
 import NoteInputModal from '../components/NoteInputModal'
 import RoundIconBtn from '../components/RoundIconBtn'
+import NotFound from '../components/NotFound';
 import SearchBar from '../components/SearchBar'
 import { useNotes } from '../context/NoteProvider'
+import colors from '../misc/colors';
+
 
 const NoteScreen = ({ user, navigation }) => {
-  const [greet, setGreet] = useState('Evening')
-  const [modalVisible, setModalVisible] = useState(false)
+  const [greet, setGreet] = useState('Evening');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [resultNotFound, setResultNotFound] = useState(false);
 
-  const { notes, setNotes } = useNotes()
+  const { notes, setNotes, findNotes } = useNotes();
 
   const findGreet = () => {
     const hours = new Date().getHours()
@@ -44,26 +49,81 @@ const NoteScreen = ({ user, navigation }) => {
     navigation.navigate('NoteDetail', { note })
   }
 
+  const handleOnSearchInput = async text => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setSearchQuery('');
+      setResultNotFound(false);
+      return await findNotes();
+    }
+    const filteredNotes = notes.filter(note => {
+      if (note.title.toLowerCase().includes(text.toLowerCase())) {
+        return note;
+      }
+    });
+
+    if (filteredNotes.length) {
+      setNotes([...filteredNotes]);
+    } else {
+      setResultNotFound(true);
+    }
+  };
+
+  const handleOnClear = async () => {
+    setSearchQuery('');
+    setResultNotFound(false);
+    await findNotes();
+  };
+
   return (
     <>
-      <StatusBar />
+      <StatusBar barStyle='dark-content' backgroundColor={colors.LIGHT} />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Text style={styles.header}>{`Good ${greet} ${user.name}`}</Text>
-          {notes.length ? <SearchBar containerStyle={{ marginVertical: 15 }} /> : null}
-          <FlatList
-            data={notes}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 15 }}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => <Note item={item} onPress={() => openNote(item)} />}
-          />
-          <View style={[StyleSheet.absoluteFillObject, styles.emptyHeaderContainer]}>
-            {!notes.length && <Text style={styles.emptyHeading}>Add Notes</Text>}
-          </View>
-          <RoundIconBtn name='plus' style={styles.addBtn} onPress={() => setModalVisible(true)} />
+          {notes.length ? (
+            <SearchBar
+              value={searchQuery}
+              onChangeText={handleOnSearchInput}
+              containerStyle={{ marginVertical: 15 }}
+              onClear={handleOnClear}
+            />
+          ) : null}
+
+          {resultNotFound ? (
+            <NotFound />
+          ) : (
+            <FlatList
+              data={notes}
+              numColumns={2}
+              columnWrapperStyle={{
+                justifyContent: 'space-between',
+                marginBottom: 15,
+              }}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({ item }) => (
+                <Note onPress={() => openNote(item)} item={item} />
+              )}
+            />
+          )}
+
+          {!notes.length ? (
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                styles.emptyHeaderContainer,
+              ]}
+            >
+              <Text style={styles.emptyHeader}>Add Notes</Text>
+            </View>
+          ) : null}
         </View>
       </TouchableWithoutFeedback>
+      <RoundIconBtn
+        onPress={() => setModalVisible(true)}
+        name='plus'
+        style={styles.addBtn}
+      />
       <NoteInputModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -72,19 +132,18 @@ const NoteScreen = ({ user, navigation }) => {
     </>
   )
 }
-
 const styles = StyleSheet.create({
   header: {
     fontSize: 25,
     fontWeight: 'bold',
   },
   container: {
-    marginTop: 20,
     paddingHorizontal: 20,
     flex: 1,
     zIndex: 1,
+    marginTop: 20
   },
-  emptyHeading: {
+  emptyHeader: {
     fontSize: 30,
     textTransform: 'uppercase',
     fontWeight: 'bold',
@@ -102,6 +161,6 @@ const styles = StyleSheet.create({
     bottom: 50,
     zIndex: 1,
   },
-})
+});
 
 export default NoteScreen
